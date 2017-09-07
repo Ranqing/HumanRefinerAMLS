@@ -15,7 +15,7 @@ import numpy as np
 
 
 def Gauss(beta, r):
-    print('Gauss:\tbeta = ', beta, '\tr = ',  r, end = '\t')
+    # print('Gauss:\tbeta = ', beta, '\tr = ',  r, end = '\t')
     w = 0.0
     dwdr = 0.0
     dwdrr = 0.0
@@ -29,7 +29,7 @@ def Gauss(beta, r):
         dwdr = -2 * b2 * r * np.exp(-b2 * r2) / (1.0 - eb2)
         dwdrr = -2 * b2 * np.exp(-b2 * r2) * (1 - 2 * b2 * r2) / (1.0 - eb2)
 
-    print(' --> w = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
+    # print(' --> \tw = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
 
 
@@ -100,7 +100,7 @@ def CSRBF2(r):
 
 def qing_weight(type, para, di, dmI):
 
-    print('qing_weight:', end = '\t')
+    # print('qing_weight:', end = '\t')
     r = abs(di) / dmI
 
     if di >= 0.0:
@@ -108,8 +108,8 @@ def qing_weight(type, para, di, dmI):
     else:
         drdx = -1.0 / dmI
 
-    print('r = ',r, end = '\t')
-    print('drdx = ', drdx, end = '\n')
+    # print('r = ',r, end = '\t')
+    # print('drdx = ', drdx, end = '\n')
 
     w = 0.0
     dwdr = 0.0
