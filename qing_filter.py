@@ -15,7 +15,8 @@ def qing_1d_median_filter(dsp_of_testy, wnd_sz):
             xj = max(0, xj)
             d = int(dsp_of_testy[xj])
             if not d == 0:
-                dhist[d] += 1
+                idx = int(d - dmin)
+                dhist[idx] += 1
 
             # if x == 312:
             #     print('x = %d ' % x, 'xj = %d, ' % xj, 'd = %d' % d)
