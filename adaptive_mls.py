@@ -1,16 +1,14 @@
 from qing_operation import *
-from qing_weight import *
 from qing_io import *
 from qing_filter import *
+from qing_mls import *
+
 from matplotlib import pyplot as plt
 import cv2
-import numpy as np
-import scipy.optimize as optimization
 
 
 # range of x-axis is generated automatically
 def qing_draw_1d_narray(testy, array_data, xmin, xmax, filename):
-    # f1 = plt.figure(figsize=(100, 100))
     f1 = plt.figure(testy)
     xdata = range(xmin, xmax, 1)
     plt.plot(xdata, array_data[xmin:xmax])
@@ -19,6 +17,7 @@ def qing_draw_1d_narray(testy, array_data, xmin, xmax, filename):
     # plt.show()
     print('saving ' + filename)
     plt.savefig(filename)
+    pass
 
 
 def qing_move_outliers(dsp_of_testy, xmin, xmax, wnd_sz, threshold=10):
@@ -28,273 +27,108 @@ def qing_move_outliers(dsp_of_testy, xmin, xmax, wnd_sz, threshold=10):
 
     # wnd_sz = 5
     qing_1d_median_filter(dsp_of_testy[xmin:xmax + 1], wnd_sz)
+    pass
 
 
 def qing_move_outliers_new(data, wnd_sz, threshold):
     n = len(data)
-    # print ('n = ', n)
     for i in range(0, n):
         if data[i] <= threshold:
             data[i] = 0
     qing_1d_median_filter(data, wnd_sz)
-
-
-# SYNTAX: [PHI, DPHI, DDPHI] = MLS1DShape(m, nnodes, xi, npoints, x, dm, wtype, para)
-#
-# INPUT PARAMETERS
-#    m - Total number of basis functions (1: Constant basis;  2: Linear basis;  3: Quadratic basis)
-#    nnodes  - Total number of nodes used to construct MLS approximation
-#    npoints - Total number of points whose MLS shape function to be evaluated
-#    xi(nnodes) - Coordinates of nodes used to construct MLS approximation
-#    x(npoints) - Coordinates of points whose MLS shape function to be evaluated
-#    dm(nnodes) - Radius of support of nodes
-#    wtype - Type of weight function
-#    para  - Weight function parameter
-#
-# OUTPUT PARAMETERS
-#    PHI   - MLS Shpae function
-#    DPHI  - First order derivatives of MLS Shpae function
-#    DDPHI - Second order derivatives of MLS Shpae function
-#
-def qing_1d_mls(m, nnodes, xi, npoints, x, dmI, wtype, para):
-    # print('nnodes = ', nnodes, 'npoints = ',
-    #       npoints, end='\n')        # 1 x nnodes
-    wi = np.zeros(nnodes)
-    dwi = np.zeros(nnodes)          # 1 x nnodes
-    ddwi = np.zeros(nnodes)         # 1 x nnodes
-
-    PHI = np.zeros((npoints, nnodes))        # npoints x nnodes
-    DPHI = np.zeros((npoints, nnodes))       # npoints x nnodes
-    DDPHI = np.zeros((npoints, nnodes))      # npoints x nnodes
-
-    # loop over all evalutaion points to calculate value of shape function
-    # FI(x)
-    print()
-    for j in range(0, npoints):
-        # print('-------------------------------------------------------------')
-        # print('j = ', j, '\tx = ', x[j])
-        # print('-------------------------------------------------------------')
-
-        # detemine weight function and their dericatives at every node
-        for i in range(0, nnodes):
-            di = x[j] - xi[i]
-            # print('i = ', i, '\tx = ', x[j], '\txi = ', xi[
-            #       i], '\tdi = ', di,  end='\n')
-
-            # print(wtype, para, di, dmI[i])
-            wi[i], dwi[i], ddwi[i] = qing_weight(wtype, para, di, dmI[i])
-            # print('wi = ', wi[i], '\tdwi = ', dwi[i], '\tddwi = ', ddwi[i])
-            # print('\n')
-
-        # sys.exit()
-
-        # evaluate basis p, B Matrix and their derivatives
-        if m == 1:  # Shepard function
-            p = np.ones(nnodes)    # 1 x nnodes
-            p = np.reshape(p, (1, nnodes))
-            px = [1]               # 1 x 1
-            dpx = [0]              # 1 x 1
-            ddpx = [0]             # 1 x 1
-
-            # element multiplication
-            B = p * wi
-            DB = p * dwi
-            DDB = p * ddwi
-            pass
-        elif m == 2:
-            p = np.array([np.ones(nnodes), xi])     # 2 x nnodes
-            p = np.reshape(p, (2, nnodes))
-            px = np.array(([1], [x[j]]))            # 2 x 1
-            dpx = np.array(([0], [1]))              # 2 x 1
-            ddpx = np.array(([0], [0]))             # 2 x 1
-
-            B = p * np.array(([wi], [wi]))          # 2 x 1
-            DB = p * np.array(([dwi],  [dwi]))      # 2 x 1
-            DDB = p * np.array(([ddwi], [ddwi]))    # 2 x 1
-            pass
-        elif m == 3:
-            p = np.array(([np.ones(nnodes), xi, xi * xi]))    # 3 x nnodes
-            p = np.reshape(p, (3, nnodes))
-            px = np.array(([1], x[j], x[j] * x[j]))          # 3 x 1
-            dpx = np.array(([0], [1], [2 * x[j]]))
-            ddpx = np.array(([0], [0], [2]))
-
-            B = p * np.array(([wi], [wi], [wi]))
-            DB = p * np.array(([dwi], [dwi], [dwi]))
-            DDB = p * np.array(([ddwi], [ddwi], [ddwi]))
-            pass
-        else:
-            print('invalid order of basis')
-
-        # print('DEBUG')
-        # print('p : ', p, end='\n')
-        # print('px : ', px, end='\n')
-        # print('dpx : ', dpx, end='\n')
-        # print('ddpx : ', ddpx, end='\n')
-        # print('wi : ', wi, end='\n')
-        # print('dwi : ', dwi, end='\n')
-        # print('ddwi : ', ddwi, end='\n')
-        # print('B = p .* wi: ', B, end='\n')
-        # print('DB = p .* dwi ', DB, end='\n')
-        # print('DDB = p .*  ddwi: ', DDB, end='\n')
-
-        # evaluate matrices A and its derivatives
-        A = np.zeros((m, m))
-        DA = np.zeros((m, m))
-        DDA = np.zeros((m, m))
-
-        for i in range(0, nnodes):
-            pp = np.dot(p[:, i], np.transpose(p[:, i]))
-
-            A = A + wi[i] * pp
-            DA = DA + dwi[i] * pp
-            DDA = DDA + ddwi[i] * pp
-            pass
-
-        # if np.linalg.det(A):
-        #     Ainv = np.linalg.inv(A)      # if A is not singular how to deal
-        # else:
-        #     Ainv = np.zeros((m, m))
-
-        Ainv = np.linalg.inv(A)
-
-        # print('A = ', A, end='\n')
-        # print('invA = ', Ainv, end='\n')
-
-        rx = np.dot(Ainv, px)
-        PHI[j, :] = np.dot(np.transpose(rx), B)
-
-        drx = np.dot(Ainv, (dpx - np.dot(DA, rx)))
-        DPHI[j, :] = np.dot(np.transpose(drx), B) + \
-            np.dot(np.transpose(rx), DB)
-
-        ddrx = np.dot(Ainv, (ddpx - 2 * np.dot(DA, drx) - np.dot(DDA, rx)))
-        DDPHI[j, :] = np.dot(np.transpose(
-            ddrx), B) + 2 * np.dot(np.transpose(drx), DB) + np.dot(np.transpose(rx), DDB)
-        pass
-
-    return PHI, DPHI, DDPHI
     pass
 
+
 # using mls to fit disparity data along a scanline
+# for debug before calling in adaptive_mls
+# corresponding to qing_mls_stable
+# def qing_mls_beta(dsp_of_testy, xmin, xmax):
+#     wnd_sz = 5
+#     qing_1d_median_filter(dsp_of_testy[xmin:xmax + 1], wnd_sz)
 
+#     dx = 1
+#     xdata = np.array(range(xmin, xmax + 1, dx))
+#     ydata = dsp_of_testy[xmin:xmax + 1]
+#     xlen = len(xdata)
 
-def qing_mls(dsp_of_testy, xmin, xmax):
-    wnd_sz = 5
-    qing_1d_median_filter(dsp_of_testy[xmin:xmax + 1], wnd_sz)
+#     dx = 10 * dx
+#     xnode = np.array(range(xmin, xmax + 1, dx))
+#     ynode = dsp_of_testy[xmin:xmax + 1:dx]
+#     nnodes = len(xnode)
 
-    dx = 1
-    xdata = np.array(range(xmin, xmax + 1, dx))
-    ydata = dsp_of_testy[xmin:xmax + 1]
-    xlen = len(xdata)
+#     # f1 = plt.figure(1)
+#     # plt.plot(xdata, ydata, 'b', label='origin')
+#     # plt.plot(xnode, ynode, 'r', label='node')
+#     # plt.legend()
+#     # plt.show()
 
-    # print(A.shape)
-    # print(B.shape)
-    # qing_draw_1d_narray(dsp_of_testy, 0, length)
-    #
+#     scale = 3
+#     dm = scale * dx * np.ones(nnodes)
 
-    dx = 10 * dx
-    xnode = np.array(range(xmin, xmax + 1, dx))
-    ynode = dsp_of_testy[xmin:xmax + 1:dx]
-    nnodes = len(xnode)
+#     PHI, DPHI, DDPHI = qing_1d_mls(
+#         1, nnodes, xnode, xlen, xdata, dm, 'GAUSS', 3.0)
 
-    f1 = plt.figure(1)
-    plt.plot(xdata, ydata, 'b', label='origin')
-    plt.plot(xnode, ynode, 'r', label='node')
-    # print(xnode)
-    # print(ynode)
-    plt.legend()
-    plt.show()
+#     # print('PHI shape: ', PHI.shape)
+#     # print('DPHI shape: ', DPHI.shape)
+#     # print('DDPHI shape: ', DDPHI.shape)
+#     fid1 = open('disp_shp.dat', 'w')
+#     fid2 = open('disp_dshp.dat', 'w')
+#     fid3 = open('disp_ddshp.dat', 'w')
+#     fid1.write('%10s%10s%10s%10s\n' % (' ', 'N0', 'N10', 'N20'))
+#     fid2.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
+#     fid3.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
 
-    scale = 3
-    dm = scale * dx * np.ones(nnodes)
-    # print(nnodes)
-    # print(scale)
-    # print(dm)
-    # sys.exit()
+#     npoints = xlen
+#     for j in range(0, npoints):
+#         fid1.write('%10.4f' % xdata[j])
+#         fid2.write('%10.4f' % xdata[j])
+#         fid3.write('%10.4f' % xdata[j])
+#         fid1.write('%10.4f%10.4f%10.4f\n' %
+#                    (PHI[j][0], PHI[j][10], PHI[j][20]))
+#         fid2.write('%10.4f%10.4f%10.4f\n' %
+#                    (DPHI[j][0], DPHI[j][10], DPHI[j][20]))
+#         fid3.write('%10.4f%10.4f%10.4f\n' %
+#                    (DDPHI[j][0], DDPHI[j][10], DDPHI[j][20]))
 
-    # m, nnodes, xi, npoints, x, dmI, wtype, para
-    # m = 1
-    # l = 10.0
-    # dx = 0.5
+#     fid1.close()
+#     fid2.close()
+#     fid3.close()
 
-    # xi = np.arange(0, l, dx, dtype = float)
-    # print('xi: ', end='\t')
-    # print(xi)
-    # nnodes = len(xi)
-    # dx = dx * 0.1
-    # x = np.arange(0, l, dx, dtype = float)
-    # xlen = len(x)
-    # print('x: ', end='\t')
-    # print(x)
+#     yhdata = np.dot(PHI, np.transpose(ynode))  # approximate function
+#     err = np.linalg.norm(np.transpose(ydata) - yhdata) / \
+#         np.linalg.norm(ydata) * 100
+#     print('err = ', err, end='\n')
 
-    # PHI, DPHI, DDPHI = qing_1d_mls(m, nnodes, xi, xlen, x, dm, 'GAUSS', 3.0)
-    # sys.exit()
+#     fig = plt.figure(2)
+#     # sub1 = plt.subplot(311)
+#     plt.plot(xdata, ydata, label='origin')
+#     plt.plot(xnode, ynode, label='node')
+#     plt.plot(xdata, yhdata, label='fitting')
 
-    PHI, DPHI, DDPHI = qing_1d_mls(
-        1, nnodes, xnode, xlen, xdata, dm, 'GAUSS', 3.0)
+#     # sub2 = plt.subplot(312)
+#     # sub2.plot(x, dy, x, dyh)
+#     # sub3 = plt.subplot(313)
+#     # sub3.plot(x, ddy, x, ddyh)
 
-    # print('PHI shape: ', PHI.shape)
-    # print('DPHI shape: ', DPHI.shape)
-    # print('DDPHI shape: ', DDPHI.shape)
-    fid1 = open('disp_shp.dat', 'w')
-    fid2 = open('disp_dshp.dat', 'w')
-    fid3 = open('disp_ddshp.dat', 'w')
-    fid1.write('%10s%10s%10s%10s\n' % (' ', 'N0', 'N10', 'N20'))
-    fid2.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
-    fid3.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
+#     plt.legend()
+#     plt.show()
 
-    npoints = xlen
-    for j in range(0, npoints):
-        fid1.write('%10.4f' % xdata[j])
-        fid2.write('%10.4f' % xdata[j])
-        fid3.write('%10.4f' % xdata[j])
-        fid1.write('%10.4f%10.4f%10.4f\n' %
-                   (PHI[j][0], PHI[j][10], PHI[j][20]))
-        fid2.write('%10.4f%10.4f%10.4f\n' %
-                   (DPHI[j][0], DPHI[j][10], DPHI[j][20]))
-        fid3.write('%10.4f%10.4f%10.4f\n' %
-                   (DDPHI[j][0], DDPHI[j][10], DDPHI[j][20]))
+#     qing_save_1d_txt(dsp_of_testy[xmin:xmax + 1], 'dsp_before_mls.txt')
+#     dsp_of_testy[xmin:xmax + 1] = yhdata[0:xlen]
+#     qing_save_1d_txt(dsp_of_testy[xmin:xmax + 1], 'dsp_after_mls.txt')
 
-    fid1.close()
-    fid2.close()
-    fid3.close()
+#     # test
+#     test_a = np.loadtxt('dsp_before_mls.txt')
+#     test_b = np.loadtxt('dsp_after_mls.txt')
+#     test_len = len(test_a)
+#     test_x = np.arange(0, test_len, 1)
+#     print('test_len = ', test_len)
 
-    yhdata = np.dot(PHI, np.transpose(ynode))  # approximate function
-    err = np.linalg.norm(np.transpose(ydata) - yhdata) / \
-        np.linalg.norm(ydata) * 100
-    print('err = ', err, end='\n')
-
-    fig = plt.figure(2)
-    # sub1 = plt.subplot(311)
-    plt.plot(xdata, ydata, label='origin')
-    plt.plot(xnode, ynode, label='node')
-    plt.plot(xdata, yhdata, label='fitting')
-
-    # sub2 = plt.subplot(312)
-    # sub2.plot(x, dy, x, dyh)
-    # sub3 = plt.subplot(313)
-    # sub3.plot(x, ddy, x, ddyh)
-
-    plt.legend()
-    plt.show()
-
-    qing_save_1d_txt(dsp_of_testy[xmin:xmax + 1], 'dsp_before_mls.txt')
-    dsp_of_testy[xmin:xmax + 1] = yhdata[0:xlen]
-    qing_save_1d_txt(dsp_of_testy[xmin:xmax + 1], 'dsp_after_mls.txt')
-
-    # test
-    test_a = np.loadtxt('dsp_before_mls.txt')
-    test_b = np.loadtxt('dsp_after_mls.txt')
-    test_len = len(test_a)
-    test_x = np.arange(0, test_len, 1)
-    print('test_len = ', test_len)
-
-    fig = plt.figure(3)
-    plt.plot(test_x, test_a, label='before')
-    plt.plot(test_x, test_b, label='after')
-    plt.legend()
-    plt.show()
+#     fig = plt.figure(3)
+#     plt.plot(test_x, test_a, label='before')
+#     plt.plot(test_x, test_b, label='after')
+#     plt.legend()
+#     plt.show()
 
 
 def qing_get_msk_segments(msk_of_testy):
@@ -343,10 +177,12 @@ def qing_get_msk_segments(msk_of_testy):
     #     print(msk_of_testy[int(xmin[j]):int(xmax[j]+1)], end = '\n')
 
     return segments, xmin, xmax
+    pass
 
     # sys.exit()
 
 
+# a stable version of mls along a scanline
 def qing_mls_stable(dsp_of_testy, xmin, xmax):
     # wnd_sz = 5
     # qing_1d_median_filter(dsp_of_testy[xmin:xmax + 1], wnd_sz)
@@ -366,14 +202,18 @@ def qing_mls_stable(dsp_of_testy, xmin, xmax):
     dm = scale * dx * np.ones(nnodes)
 
     #1, nnodes, xnode, xlen, xdata, dm, 'GAUSS', 3.0
-    PHI, DPHI, DDPHI = qing_1d_mls(1, nnodes, xnode, ndatas, xdata, dm, 'GAUSS', 3.0)
-    print('end of moving least square fitting in [%d - %d].' % (xmin, xmax), end='\t')
+    PHI, DPHI, DDPHI = qing_1d_mls(
+        1, nnodes, xnode, ndatas, xdata, dm, 'GAUSS', 3.0)
+    print(
+        'end of moving least square fitting in [%d - %d].' % (xmin, xmax), end='\t')
 
     fit_ydata = np.dot(PHI, np.transpose(ynode))  # approximate function
-    err = np.linalg.norm(np.transpose(ydata) - fit_ydata) / np.linalg.norm(ydata) * 100
+    err = np.linalg.norm(np.transpose(ydata) - fit_ydata) / \
+        np.linalg.norm(ydata) * 100
     print('err = ', err, end='\n')
 
     dsp_of_testy[xmin:xmax + 1] = fit_ydata[0:ndatas]  # copy
+    pass
 
 
 def adaptive_mls(workdir, dspname, mskname, dsptxt):
@@ -382,8 +222,7 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
     ret, thresh_msk = cv2.threshold(mskmtx, 75, 255, cv2.THRESH_BINARY)
 
     height, width = dspmtx.shape
-    print('height = ', height)
-    print('width = ', width)
+    print('height = %d\twidth = %d\n' % (height, width))
 
     save_dsp_txt_name = 'disp.txt'
     qing_save_txt(dspmtx, save_dsp_txt_name)
@@ -394,17 +233,16 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
     # cv2.destroyAllWindows()
 
     # dsp_data = qing_read_txt(dsptxt)
-    # qing_read_txt(dsptxt)
+    # type: ndarray
     read_data = np.loadtxt(save_dsp_txt_name)
     dsp_data = np.reshape(read_data, (height, width))
-    # print(type(dsp_data))
-    # print(dsp_data.shape)
+
+    outdir = './output'
+    qing_mkdir(outdir)
 
     # testy = 500
     # xmin = 80
     # xmax = 500
-    outdir = './output'
-    qing_mkdir(outdir)
 
     # test_msk = np.array([0,255,0, 255,255,255])
     # print(test_msk)
@@ -456,7 +294,7 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
     qing_save_txt(dsp_data, filename, '%f')
 
     return filename, dsp_data
-    # above
+    pass
 
     # test codes
     # testy = 100
@@ -476,125 +314,6 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
     # qing_draw_1d_narray(dsp_of_testy, xmin, xmax)
 
 
-def qing_test_1d_mls_fitting():
-    print('qing_test_1d_mls_fitting')
-
-    l = 10.0
-    m = 1
-    scale = 3
-
-    dx = 0.5
-    xi = np.arange(0, l, dx, dtype=float)
-    xi = np.append(xi, [l])
-    nnodes = len(xi)
-    print('xi: ', xi, '\nnnodes = ', nnodes, end='\n')
-
-    dx = 0.05
-    x = np.arange(0, l, dx, dtype=float)
-    x = np.append(x, [l])
-    npoints = len(x)
-    print('x: ', x, '\nnpoints = ', npoints, end='\n')
-
-    scale = 3
-    dx = 0.5
-    dm = scale * dx * np.ones(nnodes)
-    print('dm: ', dm, end='\n')
-
-    # calculating weighting function
-    PHI, DPHI, DDPHI = qing_1d_mls(m, nnodes, xi, npoints, x, dm, 'GAUSS', 3.0)
-    print('PHI shape: ', PHI.shape)
-    print('DPHI shape: ', DPHI.shape)
-    print('DDPHI shape: ', DDPHI.shape)
-    fid1 = open('shp.dat', 'w')
-    fid2 = open('dshp.dat', 'w')
-    fid3 = open('ddshp.dat', 'w')
-    fid1.write('%10s%10s%10s%10s\n' % (' ', 'N0', 'N10', 'N20'))
-    fid2.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
-    fid3.write('%10s%10s%10s%10s\n' % (' ', 'N1', 'N10', 'N20'))
-
-    for j in range(0, npoints):
-        fid1.write('%10.4f' % x[j])
-        fid2.write('%10.4f' % x[j])
-        fid3.write('%10.4f' % x[j])
-        fid1.write('%10.4f%10.4f%10.4f\n' %
-                   (PHI[j][0], PHI[j][10], PHI[j][20]))
-        fid2.write('%10.4f%10.4f%10.4f\n' %
-                   (DPHI[j][0], DPHI[j][10], DPHI[j][20]))
-        fid3.write('%10.4f%10.4f%10.4f\n' %
-                   (DDPHI[j][0], DDPHI[j][10], DDPHI[j][20]))
-
-    fid1.close()
-    fid2.close()
-    fid3.close()
-
-    f1 = plt.figure(1)
-    sub1 = plt.subplot(311)
-    sub1.plot(x, PHI[:, 0], label='fitting data')
-    # sub1.grid(True)
-    sub1.legend()
-
-    sub2 = plt.subplot(312)
-    sub2.plot(x, DPHI[:, 0], label='one-order derivatives')
-    # sub2.grid(True)
-    sub2.legend()
-
-    sub3 = plt.subplot(313)
-    sub3.plot(x, DDPHI[:, 0], label='second-order derivatives')
-    # sub3.grid(True)
-    sub3.legend()
-
-    # plt.legend()
-
-    plt.show()
-
-    print('\nstart to fitting curve sin(x)', end='\n')
-    yi = np.sin(xi)
-    y = np.sin(x)
-    yh = np.dot(PHI, np.transpose(yi))  # approximate function
-    err = np.linalg.norm(np.transpose(y) - yh) / np.linalg.norm(y) * 100
-
-    dy = np.cos(x)
-    dyh = np.dot(DPHI, np.transpose(yi))  # first order derivative
-    errd = np.linalg.norm(np.transpose(dy) - dyh) / np.linalg.norm(dy) * 100
-
-    ddy = -np.sin(x)
-    ddyh = np.dot(DDPHI, np.transpose(yi))  # second order derivative
-    errdd = np.linalg.norm(np.transpose(ddy) - ddyh) / \
-        np.linalg.norm(ddy) * 100
-
-    fid1 = open('fun.dat', 'w')
-    fid2 = open('dfun.dat', 'w')
-    fid3 = open('ddfun.dat', 'w')
-    fid1.write('%10s%10s%10s\n' % (' ', 'Exact', 'Appr'))
-    fid2.write('%10s%10s%10s\n' % (' ', 'Exact', 'Appr'))
-    fid3.write('%10s%10s%10s\n' % (' ', 'Exact', 'Appr'))
-
-    for j in range(0, npoints):
-        fid1.write('%10.4f' % (x[j]))
-        fid1.write('%10.4f%10.4f\n' % (y[j], yh[j]))
-        fid2.write('%10.4f' % (x[j]))
-        fid2.write('%10.4f%10.4f\n' % (dy[j], dyh[j]))
-        fid3.write('%10.4f' % (x[j]))
-        fid3.write('%10.4f%10.4f\n' % (ddy[j], ddyh[j]))
-
-    fid1.close()
-    fid2.close()
-    fid3.close()
-
-    # blue - input data; yellow - fitting
-    fig = plt.figure(2)
-    sub1 = plt.subplot(311)
-    sub1.plot(x, y, x, yh)
-    sub2 = plt.subplot(312)
-    sub2.plot(x, dy, x, dyh)
-    sub3 = plt.subplot(313)
-    sub3.plot(x, ddy, x, ddyh)
-
-    plt.show()
-
-    pass
-
-
 def qing_read_dsp_txt(txtname, dspname=''):
     if dspname == '':
         dsp_data = np.loadtxt(txtname)
@@ -603,14 +322,13 @@ def qing_read_dsp_txt(txtname, dspname=''):
 
     dspmtx = cv2.imread(dspname, 0)
     height, width = dspmtx.shape
-    # print('height = ', height)
-    # print('width = ', width)
 
     save_dsp_txt_name = 'disp.txt'
     qing_save_txt(dspmtx, save_dsp_txt_name)
     read_data = np.loadtxt(save_dsp_txt_name)
     dsp_data = np.reshape(read_data, (height, width))
     return dsp_data
+    pass
 
 
 def qing_read_stereo_txt(txtname):
@@ -672,8 +390,7 @@ def dsp_to_depth(dsp, thresh_msk, imgmtx, stereo_mtx, st_x, st_y, base_d, scale,
             colors[cnt, 0] = imgmtx[y, x, 2]
             colors[cnt, 1] = imgmtx[y, x, 1]
             colors[cnt, 2] = imgmtx[y, x, 0]
-            cnt+=1
-
+            cnt += 1
 
     print('saving ' + plyname)
     qing_save_ply(plyname, pointcnt, points, colors)
@@ -681,6 +398,9 @@ def dsp_to_depth(dsp, thresh_msk, imgmtx, stereo_mtx, st_x, st_y, base_d, scale,
 
 
 def main():
+    # from qing_msl1d_in_python import *
+    # qing_test_1d_mls_fitting()
+
     workdir = './test/'
     imgname = workdir + 'crop_imgL_2.jpg'        # 550x950
     mskname = workdir + 'crop_mskL_2.jpg'
@@ -721,7 +441,6 @@ def main():
     dsp_to_depth(dsp_data, thresh_msk, imgmtx, stereo_mtx,
                  f_st_x, f_st_y, f_base_d, scale, ply_name)
 
-    # qing_test_1d_mls_fitting()
 
 if __name__ == '__main__':
     main()

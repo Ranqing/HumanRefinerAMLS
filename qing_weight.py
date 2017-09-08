@@ -1,4 +1,5 @@
 from qing_operation import *
+
 import numpy as np
 
 # re-write from MLS1D/Weight.m
@@ -31,6 +32,7 @@ def Gauss(beta, r):
 
     # print(' --> \tw = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
+    pass
 
 
 def Cubic(r):
@@ -45,6 +47,7 @@ def Cubic(r):
 
     print('Cubic: w = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
+    pass
 
 
 def power_function(arfa, r):
@@ -61,6 +64,7 @@ def power_function(arfa, r):
 
     print('power_func: w = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
+    pass
 
 
 def Spline(r):
@@ -79,6 +83,7 @@ def Spline(r):
 
     print('spline: w = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
+    pass
 
 
 def CSRBF2(r):
@@ -96,6 +101,7 @@ def CSRBF2(r):
 
     print('CSRBF2: w = %f' % w, 'dwdr = %f' % dwdr, 'dwdrr = %f' % dwdrr)
     return w, dwdr, dwdrr
+    pass
 
 
 def qing_weight(type, para, di, dmI):
@@ -134,6 +140,7 @@ def qing_weight(type, para, di, dmI):
     dwdx = dwdr * drdx
     dwdxx = dwdrr * drdx * drdx
     return w, dwdx, dwdxx
+    pass
 
 
 def main():

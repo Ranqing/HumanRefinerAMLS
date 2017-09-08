@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-
+import scipy.optimize as optimization
 
 def qing_square_func(xdata):
     xlen = len(xdata)
@@ -8,8 +8,6 @@ def qing_square_func(xdata):
     for i in range(0, xlen):
         square_xdata[i] = xdata[i] * xdata[i]
 
-    # for i in range(0, xlen):
-    #     print('i = %d' % xdata[i], 'i*i = %d' % square_xdata[i])
     return square_xdata
 
 
@@ -63,3 +61,10 @@ def qing_curve_fit(dsp_of_testy, xmin, xmax):
 
     plt.legend()
     plt.show()
+
+
+def main():
+    pass
+
+if __name__ == '__main__':
+    main()
