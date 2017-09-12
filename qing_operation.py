@@ -2,10 +2,13 @@ import os
 import glob
 import sys
 import shutil
-# import exifread
+import exifread
 import time
 import datetime
 import operator
+
+import numpy as np
+
 
 QING_EXIF_DATETIME = 'Image DateTime'
 QING_TIME_STAMP = datetime.datetime(1990, 8, 22, 0, 0, 0)
@@ -52,19 +55,19 @@ def qing_traverse_dict(records):
         print(key, value)
 
 
-# def qing_show_exif(path_name):
-#     f = open(path_name, 'rb')
-#     # a dictonary mapping names of exif tages to their values
-#     tags = exifread.process_file(f)
-#     for tag in tags.keys():
-#         if tag in ('JPEGThumbnail', 'TIFFThumbnail', 'Filename', 'EXIF MakerNote'):
-#             print("Key: %s, value %s" % (tag, tags[tag]))
+def qing_show_exif(path_name):
+    f = open(path_name, 'rb')
+    # a dictonary mapping names of exif tages to their values
+    tags = exifread.process_file(f)
+    for tag in tags.keys():
+        if tag in ('JPEGThumbnail', 'TIFFThumbnail', 'Filename', 'EXIF MakerNote'):
+            print("Key: %s, value %s" % (tag, tags[tag]))
 
 
-# def qing_read_exif(path_name, key):
-#     f = open(path_name, 'rb')
-#     tags = exifread.process_file(f)
-#     return tags[key]
+def qing_read_exif(path_name, key):
+    f = open(path_name, 'rb')
+    tags = exifread.process_file(f)
+    return tags[key]
 
 
 def qing_mkdir(ndir):
@@ -112,6 +115,62 @@ def qing_imagelist_generator(out_filename, dir_path, filetype):
         filename = os.path.basename(f)
         out_file_object.write(filename + '\n')
     out_file_object.close()
+
+
+# data_in: ndarray
+# wnd_sz: filter window size
+def qing_1d_median_filter(data_in, wnd_sz):
+    rangex = len(data_in)
+    offset = int(wnd_sz * 0.5)
+    dmax = data_in.max()
+    dmin = data_in.min()
+    # print('dmax = %d' % dmax, 'dmin = %d' % dmin, 'wnd_sz = %d' % wnd_sz)
+
+    for x in range(0, rangex):
+        dhist = np.zeros((int(dmax - dmin + 1), 1))
+        for j in range(-offset, offset + 1):
+            xj = min(rangex - 1, x + j)
+            xj = max(0, xj)
+            d = int(data_in[xj])
+            if not d == 0:
+                idx = int(d - dmin)
+                dhist[idx] += 1
+
+        count = 0
+        middle = 0
+        for j in range(0, len(dhist)):
+            count += dhist[j]
+            if count * 2 > wnd_sz:
+                middle = j
+                break
+            pass
+
+        data_in[x] = middle + dmin
+        pass
+
+
+def qing_read_txt(txtname):
+    with open(txtname, 'r') as f:
+        data = f.readlines()
+        for line in data:
+            print(line)
+            odom = line.split()
+            numbers_float = map(float, odom)
+            # print(numbers_float)
+    return numbers_float
+    pass
+
+
+def qing_save_1d_txt(mtx, txtname):
+    np.savetxt(txtname, mtx[:], fmt="%f")
+    print('saving ' + txtname)
+    pass
+
+
+def qing_save_2d_txt(mtx, txtname, format='%d'):
+    np.savetxt(txtname, mtx[:, :], fmt=format)
+    print('saving ' + txtname)
+    pass
 
 
 def main():

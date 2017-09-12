@@ -1,5 +1,3 @@
-from qing_operation import *
-
 import numpy as np
 
 # re-write from MLS1D/Weight.m

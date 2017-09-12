@@ -18,7 +18,7 @@ def qing_read_txt(txtname):
     pass
 
 
-def qing_save_txt(mtx, txtname, format='%d'):
+def qing_save_2d_txt(mtx, txtname, format='%d'):
     np.savetxt(txtname, mtx[:, :], fmt=format)
     print('saving ' + txtname)
     pass
