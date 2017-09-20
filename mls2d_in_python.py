@@ -2,6 +2,39 @@ from qing_operation import *
 from qing_weight_2d import *
 from qing_rectangle_weight import *
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+
+# c represents color
+def qing_plot_wireframe(ax, xdata, ydata, zdata, clr):
+    print('qing_plot_wireframe c = ', clr)
+    ax.plot_wireframe(xdata, ydata, zdata, color=clr, rstride=1, cstride=1)
+    # ax.legend()
+
+# clrmp represents colormap
+
+
+def qing_plot_surface(ax, fig, xdata, ydata, zdata, clrmp):
+    # print('qing_plot_surface clrmp = ', clrmp)
+    zmax = np.max(zdata)
+    zmin = np.min(zdata)
+    print('zmax = %f, zmin = %f' % (zmax, zmin), end='\n')
+    surf = ax.plot_surface(xdata, ydata, zdata,
+                           cmap=clrmp, linewidth=0, antialiased=False)
+
+    ax.set_zlim(zmin - 0.1, zmax + 0.1)
+    ax.zaxis.set_major_locator(LinearLocator(10))
+    ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+    # ax.set_xlabel(r'X')
+    # ax.set_ylabel(r'Y')
+    # ax.set_zlabel(r"Z-axis = weight $w(X,Y)$")
+    fig.colorbar(surf, shrink=0.4, aspect=5, cmap=clrmp)
+    # ax.legend()
+
+    pass
 
 # SHAPE FUNCTION OF 2D MLS APPROXIMATION
 #
@@ -23,6 +56,7 @@ from qing_rectangle_weight import *
 #    DPHIy - First order derivatives of MLS Shpae function to y
 #
 # INITIALIZE WEIGHT FUNCTION MATRICES
+
 
 def mls2dshape(m, nnodes, xI, yI, npoints, x, y, dmI, wtype, para):
 
@@ -265,24 +299,50 @@ def test_2d_mls():
     vI = np.arange(-2, 2.1, dx)
     xI, yI = np.meshgrid(vI, vI)
     nnodes = len(xI) * len(yI)
+    xNodes = np.zeros((1, nnodes))
+    for i in range(0, nnodes):
+        iy = int(i % len(yI))
+        ix = int(i / len(yI))
+        xNodes[0][i] = xI[iy][ix]
+    yNodes = np.zeros((1, nnodes))
+    for i in range(0, nnodes):
+        iy = int(i % len(xI))
+        ix = int(i / len(xI))
+        yNodes[0][i] = yI[iy][ix]
 
     # print('nnodes = %d' % (nnodes))
     # print('xI = ', xI.shape, end='\n')
     # print(xI)
     # print('yI = ', yI.shape, end='\n')
     # print(yI)
+    # print('xNodes = ', xNodes.shape, end='\n')
+    # print(xNodes)
+    # print('yNodes = ', yNodes.shape, end = '\n')
+    # print(yNodes)
 
     # points
     dx = 0.1
     v = np.arange(-2, 2.1, dx)
     x, y = np.meshgrid(v, v)
     npoints = len(x) * len(y)
+    xPoints = np.zeros((1, npoints))
+    for i in range(0, npoints):
+        iy = int(i % len(y))
+        ix = int(i / len(y))
+        xPoints[0][i] = x[iy][ix]
+    yPoints = np.zeros((1, npoints))
+    for i in range(0, npoints):
+        iy = int(i % len(x))
+        ix = int(i / len(x))
+        yPoints[0][i] = y[iy][ix]
 
     # print('npoints = %d' % (npoints))
     # print('x = ', x.shape, end='\n')
     # print(x)
     # print('y = ', y.shape, end='\n')
     # print(y)
+    # print('xPoints = ', xPoints.shape, end='\n')
+    # print('yPoints = ', yPoints.shape, end='\n')
 
     # radius of support of every node
     # scale * node inter
@@ -305,6 +365,7 @@ def test_2d_mls():
     print('end of mls2dshape.\t start curve fitting')
     print('PHI: ', PHI.shape,  end='\n')
     # print(PHI)
+    # sys.exit()
 
     ZI = xI * np.exp(-xI**2 - yI**2)
     Z = x * np.exp(-x**2 - y**2)
@@ -330,25 +391,49 @@ def test_2d_mls():
         ix = int(i / node_h)
         ZNodes[0][i] = ZI[iy][ix]
 
+    # plotting
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    z = np.reshape(ZPoints, (len(y), len(x)))
+    zI = np.reshape(ZNodes, (len(yI), len(xI)))
+    # qing_plot_wireframe(ax, xPoints, yPoints, ZPoints, 'g')
+    # qing_plot_wireframe(ax, xNodes, yNodes, ZNodes, 'b')
+    # plt.show()
+
+    # fig2 = plt.figure()
+    # ax2 = fig.gca(projection='3d')
+
+    # qing_plot_surface(ax, fig, xI, yI, zI, plt.cm.coolwarm)
+
     # function approximation
-    ZH = np.dot(PHI, np.transpose(ZNodes))
+    ZHPoints = np.dot(PHI, np.transpose(ZNodes))
+    print('xPoints = ', xPoints.shape)
+    print('yPoints = ', yPoints.shape)
+    print('ZHPoints = ', ZHPoints.shape)
     # relative error norm in approximation function
-    err = np.linalg.norm(np.transpose(ZPoints) - ZH) / \
+    err = np.linalg.norm(np.transpose(ZPoints) - ZHPoints) / \
         np.linalg.norm(ZPoints)
     print('fitting err = %f' % (err))
+    # zh = np.reshape(ZHPoints, (len(y), len(x)))
+
+    # qing_plot_surface(ax, fig, x, y, z, plt.cm.winter)
+    # qing_plot_surface(ax, fig, x, y, zh, plt.cm.coolwarm)
+    qing_plot_wireframe(ax, xPoints, yPoints, ZPoints, 'g')
+    qing_plot_wireframe(ax, xPoints, yPoints, np.transpose(ZHPoints), 'b')
+    plt.show()
 
     # converse one-dimension data to two-dimension data
-    ZPoints_sh = np.reshape(ZPoints, (len(y), len(x)))
+    # ZPoints_sh = np.reshape(ZPoints, (len(y), len(x)))
 
-    dZdX, dZdY = np.gradient(ZPoints_sh)
-    ddzx = np.reshape(dZdX, (1, npoints))
-    ddzy = np.reshape(dZdY, (1, npoints))
-    ddzxh = np.dot(DPHIx, np.transpose(ZNodes))
-    err_dx = np.linalg.norm(np.transpose(ddzx) - ddzxh) / np.linalg.norm(ddzx)
-    print('fiiting err in dx = %f' % (err_dx))
-    ddzyh = np.dot(DPHIy, np.transpose(ZNodes))
-    err_dy = np.linalg.norm(np.transpose(ddzy) - ddzyh) / np.linalg.norm(ddzy)
-    print('fitting err in dy = %f' % (err_dy))
+    # dZdX, dZdY = np.gradient(ZPoints_sh)
+    # ddzx = np.reshape(dZdX, (1, npoints))
+    # ddzy = np.reshape(dZdY, (1, npoints))
+    # ddzxh = np.dot(DPHIx, np.transpose(ZNodes))
+    # err_dx = np.linalg.norm(np.transpose(ddzx) - ddzxh) / np.linalg.norm(ddzx)
+    # print('fiiting err in dx = %f' % (err_dx))
+    # ddzyh = np.dot(DPHIy, np.transpose(ZNodes))
+    # err_dy = np.linalg.norm(np.transpose(ddzy) - ddzyh) / np.linalg.norm(ddzy)
+    # print('fitting err in dy = %f' % (err_dy))
 
     # print('dZx = ', dZx.shape)
     # print(dZx)
