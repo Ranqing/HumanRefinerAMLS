@@ -102,11 +102,9 @@ def CSRBF2(r):
     pass
 
 
-def qing_weight(type, para, di, dmI):
+def qing_weight_1d(type, para, di, dmI):
 
-    # print('qing_weight:', end = '\t')
     r = abs(di) / dmI
-
     if di >= 0.0:
         drdx = 1.0 / dmI
     else:

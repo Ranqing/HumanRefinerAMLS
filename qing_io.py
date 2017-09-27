@@ -1,20 +1,19 @@
 import numpy as np
 
 
-def qing_read_txt(txtname):
-    # for line in open(txtname):
-    #     print(line, end=' ')
-    # pass
-    # disp = numpy.loadtxt(txtname)
-    # print(disp.shape)
+def qing_read_2d_txt(txtname):
+    list_of_lists = []
     with open(txtname, 'r') as f:
         data = f.readlines()
+        # print('number of lines = %d'%(len(data)))
         for line in data:
-            print(line)
             odom = line.split()
-            numbers_float = map(float, odom)
+            numbers_float = list(map(float, odom))
+            list_of_lists.append(numbers_float)
             # print(numbers_float)
-    return numbers_float
+        # cnt = len(list_of_lists)
+        # print('total = %d' % (cnt))
+    return list_of_lists
     pass
 
 
@@ -28,6 +27,19 @@ def qing_save_1d_txt(mtx, txtname):
     np.savetxt(txtname, mtx[:], fmt="%f")
     print('saving ' + txtname)
     pass
+
+
+def qing_read_img(imgname):
+    imgmtx = cv2.imread(imgname, 0)
+    if imgmtx is None:
+        print(imgname, ' is not exist.', end='\n')
+        sys.exit()
+    return imgmtx
+
+
+def qing_init_2d_array(w, h):
+    matrix = [[float(0) for x in range(w)] for y in range(h)]
+    return matrix
 
 
 def qing_save_ply(plyname, pointcnt, points, colors):

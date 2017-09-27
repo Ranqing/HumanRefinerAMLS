@@ -8,6 +8,7 @@ import datetime
 import operator
 
 import numpy as np
+import cv2
 
 
 QING_EXIF_DATETIME = 'Image DateTime'
@@ -17,8 +18,6 @@ QING_CLASSIFIED_INTERVAL = 5
 # isvalue = 0: sort on keys
 # isvalue = 1: sort on values
 # result is a tuple
-
-
 def qing_sort_dict(mydict, isvalue):
     sorted_mydict = sorted(mydict.items(), key=operator.itemgetter(isvalue))
     return sorted_mydict
@@ -117,60 +116,56 @@ def qing_imagelist_generator(out_filename, dir_path, filetype):
     out_file_object.close()
 
 
-# data_in: ndarray
-# wnd_sz: filter window size
-def qing_1d_median_filter(data_in, wnd_sz):
-    rangex = len(data_in)
-    offset = int(wnd_sz * 0.5)
-    dmax = data_in.max()
-    dmin = data_in.min()
-    # print('dmax = %d' % dmax, 'dmin = %d' % dmin, 'wnd_sz = %d' % wnd_sz)
+def qing_dsp_to_depth(dsp, thresh_msk, imgmtx, stereo_mtx, st_x, st_y, base_d, scale):
 
-    for x in range(0, rangex):
-        dhist = np.zeros((int(dmax - dmin + 1), 1))
-        for j in range(-offset, offset + 1):
-            xj = min(rangex - 1, x + j)
-            xj = max(0, xj)
-            d = int(data_in[xj])
-            if not d == 0:
-                idx = int(d - dmin)
-                dhist[idx] += 1
+    height, width = dsp.shape
+    pointcnt = 0
 
-        count = 0
-        middle = 0
-        for j in range(0, len(dhist)):
-            count += dhist[j]
-            if count * 2 > wnd_sz:
-                middle = j
-                break
-            pass
+    for y in range(0, height):
+        for x in range(0, width):
+            if thresh_msk[y, x] == 0:
+                dsp[y, x] = 0.
+                continue
+            dsp[y, x] += base_d
+            pointcnt += 1
 
-        data_in[x] = middle + dmin
-        pass
+    print('%d points generated!' % (pointcnt), end='\n')
 
+    points = np.ndarray((pointcnt, 3))
+    print(points.shape)
+    colors = np.ndarray((pointcnt, 3))
+    print(colors.shape)
+    uvd1 = np.zeros(4)
+    print(uvd1.shape)
+    xyzw = np.zeros(4)
+    print(xyzw.shape)
+    cnt = 0
+    for y in range(0, height):
+        for x in range(0, width):
+            if thresh_msk[y, x] == 0:
+                continue
 
-def qing_read_txt(txtname):
-    with open(txtname, 'r') as f:
-        data = f.readlines()
-        for line in data:
-            print(line)
-            odom = line.split()
-            numbers_float = map(float, odom)
-            # print(numbers_float)
-    return numbers_float
-    pass
+            uvd1[0] = x + st_x
+            uvd1[1] = y + st_y
+            uvd1[2] = dsp[y, x]
+            uvd1[3] = 1.0
 
+            xyzw = np.dot(stereo_mtx, uvd1)
 
-def qing_save_1d_txt(mtx, txtname):
-    np.savetxt(txtname, mtx[:], fmt="%f")
-    print('saving ' + txtname)
-    pass
+            # xyzw[0] = qmtx[ 0] * uvd1[0] + qmtx[ 1] * uvd1[1] + qmtx[ 2] * uvd1[2] + qmtx[ 3] * uvd1[3];
+            # xyzw[1] = qmtx[ 4] * uvd1[0] + qmtx[ 5] * uvd1[1] + qmtx[ 6] * uvd1[2] + qmtx[ 7] * uvd1[3];
+            # xyzw[2] = qmtx[ 8] * uvd1[0] + qmtx[ 9] * uvd1[1] + qmtx[10] * uvd1[2] + qmtx[11] * uvd1[3];
+            # xyzw[3] = qmtx[12] * uvd1[0] + qmtx[13] * uvd1[1] + qmtx[14] * uvd1[2] + qmtx[15] * uvd1[3];
 
+            points[cnt, 0] = xyzw[0] / xyzw[3]
+            points[cnt, 1] = xyzw[1] / xyzw[3]
+            points[cnt, 2] = xyzw[2] / xyzw[3]
+            colors[cnt, 0] = imgmtx[y, x, 2]
+            colors[cnt, 1] = imgmtx[y, x, 1]
+            colors[cnt, 2] = imgmtx[y, x, 0]
+            cnt += 1
 
-def qing_save_2d_txt(mtx, txtname, format='%d'):
-    np.savetxt(txtname, mtx[:, :], fmt=format)
-    print('saving ' + txtname)
-    pass
+    return pointcnt, points, colors
 
 
 def main():

@@ -245,7 +245,7 @@ def test_2d_mls():
 
     # radius of support of every node
     # scale * node inter
-    scale = 3
+    scale = 2.4
     dx = 0.5
     dmI = scale * dx * np.ones(nnodes)
     # dmI = np.reshape(dmI, (1,nnodes))
@@ -285,8 +285,8 @@ def test_2d_mls():
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     qing_plot_wireframe(ax, xPoints, yPoints, zPoints, 'g')
-    qing_plot_wireframe(ax, xNodes, yNodes, zNodes, 'b')
-    qing_plot_wireframe(ax, xPoints, yPoints, zPoints_fitted, 'y')
+    # qing_plot_wireframe(ax, xNodes, yNodes, zNodes, 'b')
+    qing_plot_wireframe(ax, xPoints, yPoints, zPoints_fitted, 'b')
     plt.show()
 
     # plotting surface

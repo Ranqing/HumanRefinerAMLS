@@ -6,8 +6,9 @@ from qing_mls import *
 from matplotlib import pyplot as plt
 import cv2
 
-
 # range of x-axis is generated automatically
+
+
 def qing_draw_1d_narray(testy, array_data, xmin, xmax, filename):
     f1 = plt.figure(testy)
     xdata = range(xmin, xmax, 1)
@@ -183,10 +184,7 @@ def qing_get_msk_segments(msk_of_testy):
 
 
 # a stable version of mls along a scanline
-def qing_mls_stable(dsp_of_testy, xmin, xmax):
-    # wnd_sz = 5
-    # qing_1d_median_filter(dsp_of_testy[xmin:xmax + 1], wnd_sz)
-
+def qing_mls_1d_stable(dsp_of_testy, xmin, xmax):
     dx = 1
     xdata = np.array(range(xmin, xmax + 1, dx))
     ydata = dsp_of_testy[xmin:xmax + 1:dx]
@@ -216,23 +214,59 @@ def qing_mls_stable(dsp_of_testy, xmin, xmax):
     pass
 
 
-def adaptive_mls(workdir, dspname, mskname, dsptxt):
+def qing_rewrite_dsp(workdir, imgname, dspname):
+    f_dspname = workdir + dspname
+    f_imgname = workdir + imgname
+    dspdatas = qing_read_txt(f_dspname)
+    dspdatas_1d = []
+    rows = len(dspdatas)
+    for r in range(rows):
+        cols = len(dspdatas[r])
+        for c in range(cols):
+            dspdatas_1d.append(dspdatas[r][c])
+    # print('size = ', len(dspdatas_1d))
+
+    imgmtx = qing_read_img(f_imgname)
+    height, width = imgmtx.shape
+    new_f_dspname = workdir + 'rewrite_' + dspname
+    writer = open(new_f_dspname, 'w')
+    for idx, d in enumerate(dspdatas_1d):
+        writer.write('%f' % d)
+        if (int(idx + 1)) % width == 0:
+            writer.write('\n')
+        else:
+            writer.write(' ')
+            pass
+    writer.close()
+    return new_f_dspname
+
+
+def qing_read_stereo_txt(txtname):
+    st_0_x = 1000
+    st_0_y = 880
+    st_1_x = 700
+    st_1_y = 880
+    data = np.loadtxt(txtname)
+    stereo_mtx = np.reshape(data, (4, 4))
+
+    return st_0_x, st_0_y, (st_0_x - st_1_x), stereo_mtx
+    pass
+
+
+def adaptive_mls_1d(workdir, dspname, mskname, dsptxt):
     dspmtx = cv2.imread(dspname, 0)
     mskmtx = cv2.imread(mskname, 0)
     ret, thresh_msk = cv2.threshold(mskmtx, 75, 255, cv2.THRESH_BINARY)
-
-    height, width = dspmtx.shape
-    print('height = %d\twidth = %d\n' % (height, width))
-
-    save_dsp_txt_name = 'disp.txt'
-    qing_save_txt(dspmtx, save_dsp_txt_name)
-
     # cv2.imshow("dsp", dspmtx)
     # cv2.imshow("msk", thresh_msk)
     # cv2.waitKey()
     # cv2.destroyAllWindows()
 
-    # dsp_data = qing_read_txt(dsptxt)
+    height, width = dspmtx.shape
+    print('height = %d\twidth = %d\n' % (height, width))
+
+    # qing_save_2d_txt(dspmtx, save_dsp_txt_name)
+    save_dsp_txt_name = qing_rewrite_dsp(workdir, dspname, dsptxt)
     # type: ndarray
     read_data = np.loadtxt(save_dsp_txt_name)
     dsp_data = np.reshape(read_data, (height, width))
@@ -243,12 +277,12 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
     # testy = 500
     # xmin = 80
     # xmax = 500
-
     # test_msk = np.array([0,255,0, 255,255,255])
     # print(test_msk)
     # t_segments, t_xmin, t_xmax = qing_get_msk_segments(test_msk)
     # sys.exit()
 
+    # 1d_mls along x-direction
     for testy in range(0, height):
         # testy = 200
         segments = 10
@@ -281,7 +315,7 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
         for j in range(0, segments):
             i_xmin = int(xmin[j])
             i_xmax = int(xmax[j])
-            qing_mls_stable(dsp_of_testy, i_xmin, i_xmax)
+            qing_mls_1d_stable(dsp_of_testy, i_xmin, i_xmax)
 
         pngname = outdir + '/mls_disp_' + str(testy) + '.png'
         qing_draw_1d_narray(testy, dsp_of_testy, int(
@@ -291,59 +325,57 @@ def adaptive_mls(workdir, dspname, mskname, dsptxt):
 
     filename = outdir + '/mls_disp_x.txt'  # mls result along x-direction
     print('saving ' + filename + ' in float format.', end='\n')
-    qing_save_txt(dsp_data, filename, '%f')
+    qing_save_2d_txt(dsp_data, filename, '%f')
+
+    # 1d_mls along y-direction
+    for testx in range(0, width):
+        segments = 10
+        ymin = np.zeros(segments)
+        ymax = np.zeros(segments)
+        dsp_of_testx = dsp_data[:, testx]
+        msk_of_testx = thresh_msk[:, testx]
+        # print('dsp_of_testx: ', dsp_of_testx.shape)
+        # print(dsp_of_testx)
+        # print('dsp_of_testx: ', msk_of_testx.shape)
+        # print(msk_of_testx)
+
+        segments, ymin, ymax = qing_get_msk_segments(msk_of_testx)
+        print('segments = ', segments, end='\n')
+        for j in range(0, segments):
+            print('%d-th seg: [%d, %d]' % (j, ymin[j], ymax[j]), end='\n')
+
+        # pngname = outdir + '/init_dsp_x_' + str(testx) + '.png'
+        # qing_draw_1d_narray(testx, dsp_of_testx, int(
+        #     ymin[0]), int(ymax[segments - 1]), pngname)
+
+        # sys.exit()
+        for j in range(0, segments):
+            i_ymin = int(ymin[j])
+            i_ymax = int(ymax[j])
+            qing_move_outliers_new(dsp_of_testx[i_ymin:i_ymax + 1], 5, 10)
+
+        # pngname = outdir + '/mf_dsp_x_' + str(testx) + '.png'
+        # qing_draw_1d_narray(testx, dsp_of_testx, int(
+        #     ymin[0]), int(ymax[segments - 1]), pngname)
+
+        for j in range(0, segments):
+            i_ymin = int(ymin[j])
+            i_ymax = int(ymax[j])
+            qing_mls_1d_stable(dsp_of_testx, i_ymin, i_ymax)
+
+        pngname = outdir + '/mls_disp_x_' + str(testx) + '.png'
+        qing_draw_1d_narray(testx, dsp_of_testx, int(
+            ymin[0]), int(ymax[segments - 1]), pngname)
+
+    filename = outdir + '/mls_disp_y_after_x.txt'  # mls result along x-direction
+    print('saving ' + filename + ' in float format.', end='\n')
+    qing_save_2d_txt(dsp_data, filename, '%f')
 
     return filename, dsp_data
     pass
 
-    # test codes
-    # testy = 100
-    # xmin = 180
-    # xmax = 380
-    # dsp_of_testy = dsp_data[testy, :]    # the testy-th row, just refernce
 
-    # # qing_draw_1d_narray(dsp_of_testy, xmin, xmax)
-    # # qing_move_outliers(dsp_of_testy, xmin, xmax)
-    # # qing_ls(dsp_of_testy, xmin, xmax)
-    # # qing_curve_fit(dsp_of_testy, xmin, xmax)
-    # qing_draw_1d_narray(testy, dsp_of_testy, xmin, xmax, 'test_disp_before.png')
-    # qing_mls(dsp_of_testy, xmin, xmax)
-    # # qing_mls_stable(dsp_of_testy, xmin, xmax)
-    # print('\n')
-    # qing_draw_1d_narray(testy, dsp_of_testy, xmin, xmax, 'test_disp_after.png')
-    # qing_draw_1d_narray(dsp_of_testy, xmin, xmax)
-
-
-def qing_read_dsp_txt(txtname, dspname=''):
-    if dspname == '':
-        dsp_data = np.loadtxt(txtname)
-        print(dsp_data.shape)
-        return dsp_data
-
-    dspmtx = cv2.imread(dspname, 0)
-    height, width = dspmtx.shape
-
-    save_dsp_txt_name = 'disp.txt'
-    qing_save_txt(dspmtx, save_dsp_txt_name)
-    read_data = np.loadtxt(save_dsp_txt_name)
-    dsp_data = np.reshape(read_data, (height, width))
-    return dsp_data
-    pass
-
-
-def qing_read_stereo_txt(txtname):
-    st_0_x = 1000
-    st_0_y = 880
-    st_1_x = 700
-    st_1_y = 880
-    data = np.loadtxt(txtname)
-    stereo_mtx = np.reshape(data, (4, 4))
-
-    return st_0_x, st_0_y, (st_0_x - st_1_x), stereo_mtx
-    pass
-
-
-def dsp_to_depth(dsp, thresh_msk, imgmtx, stereo_mtx, st_x, st_y, base_d, scale, plyname):
+def qing_dsp_to_depth(dsp, thresh_msk, imgmtx, stereo_mtx, st_x, st_y, base_d, scale, plyname):
 
     height, width = dsp.shape
     pointcnt = 0
@@ -408,19 +440,16 @@ def main():
     dsptxt = workdir + 'final_disp_l_2.txt'
     stereotxt = workdir + 'stereo.txt'
 
-    ply_name = workdir + 'init.ply'
-    init_dsp_data = qing_read_dsp_txt(dsptxt, dspname)
-    # sys.exit()
-
-    st_x, st_y, base_d, stereo_mtx = qing_read_stereo_txt(stereotxt)
-    # print( st_x, st_y, base_d, stereo_mtx)
-
+    # about image and mask data
     mskmtx = cv2.imread(mskname, 0)
     ret, thresh_msk = cv2.threshold(mskmtx, 75, 255, cv2.THRESH_BINARY)
     print(type(thresh_msk), thresh_msk.shape)
     imgmtx = cv2.imread(imgname, 1)
     print(type(imgmtx), imgmtx.shape)
 
+    # about calibration data
+    st_x, st_y, base_d, stereo_mtx = qing_read_stereo_txt(stereotxt)
+    # print( st_x, st_y, base_d, stereo_mtx)
     scale = 4
     f_st_x = st_x * 1.0 / scale
     f_st_y = st_y * 1.0 / scale
@@ -430,16 +459,23 @@ def main():
     stereo_mtx[2, 3] /= scale
     print('scaled stereo_mtx: ', end='\n')
     print(stereo_mtx)
+    sys.exit()
 
+    # ply_name = workdir + 'init.ply'
+    # dsp_name = qing_rewrite_dsp(workdir, dsptxt, dspname)
+    # init_dsp_data = qing_read_dsp_txt(dsp_name)
+    # sys.exit()
     # dsp_to_depth(init_dsp_data, thresh_msk, imgmtx, stereo_mtx,
     #              f_st_x, f_st_y, f_base_d, scale, ply_name)
     # sys.exit()
 
-    output_dsp_txt, dsp_data = adaptive_mls(workdir, dspname, mskname, dsptxt)
-
-    ply_name = workdir + 'mls.ply'
-    dsp_to_depth(dsp_data, thresh_msk, imgmtx, stereo_mtx,
-                 f_st_x, f_st_y, f_base_d, scale, ply_name)
+    output_dsp_txt, dsp_data = adaptive_mls_1d(
+        workdir, dspname, mskname, dsptxt)
+    ply_name = workdir + 'mls_y_after_x.ply'
+    pointcnt, points, colors = qing_dsp_to_depth(dsp_data, thresh_msk, imgmtx, stereo_mtx,
+                      f_st_x, f_st_y, f_base_d, scale)
+    qing_save_ply(plyname, pointcnt, points, colors)
+    print('saving ', plyname, '\t%d points.'%(pointcnt))
 
 
 if __name__ == '__main__':
