@@ -1,85 +1,6 @@
-import sys
-import os
 import numpy as np
 
-# function [w, dwdx, dwdy] = Weight2D(type, para, x,y,xI,yI,dmI)
-# EVALUATE WEIGHT FUNCTION
-#
-# SYNTAX: [w, dwdr, dwdrr] = GaussWeight(type, para, di, dmi)
-#
-# INPUT PARAMETERS
-#    type - Type of weight function
-#    para - Weight function parameter
-#    x,y   - gauss point coordinates matrix
-#    xI,yI  -  nodal point coordinate
-#    dmI - Support size
-# OUTPUT PARAMETERS
-#    w    - Value of weight function at r
-#    dwdx - Value of first order derivative of weight function with respect to x at r
-# dwdy - Value of first order derivative of weight function with respect
-# to y at r
 
-
-def weight2d(wtype, para, x, y, xI, yI, dmI):
-    # print('shape of x: ', x.shape)
-    # print('shape of y: ', y.shape)
-    r = np.sqrt((x - xI)**2 + (y - yI)**2) / dmI
-    nnodes_x = len(x)
-    nnodes_y = len(y)
-    w = np.zeros(nnodes_x, nnodes_y)
-    dwdx = np.zeros(nnodes_x, nnodes_y)
-    dwdy = np.zeros(nnodes_x, nnodes_y)
-    drdx = np.zeros(nnodes_x, nnodes_y)
-    drdy = np.zeros(nnodes_x, nnodes_y)
-    dwdr = np.zeros(nnodes_x, nnodes_y)
-    dwdr = np.zeros(nnodes_x, nnodes_y)
-
-    for j in range(0, nnodes_y):
-        for i in range(0, nnodes_x):
-            if r[i][j] == 0:
-                drdx[i][j] = 0
-                drdy[i][j] = 0
-            else:
-                drdx[i][j] = x[i][j] / (dmI**2 * r[i][j])
-                drdy[i][j] = y[i][j] / (dmI**2 * r[i][j])
-
-    # EVALUATE WEIGHT FUNCTION AND ITS FIRST AND SECOND ORDER OF DERIVATIVZES
-    # WITH RESPECT r AT r
-
-    if wtype == 'GAUSS':
-        w[i][j], dwdr[i][j] = Gauss(para, r[i][j])
-    elif wtype == 'CUBIC':
-        w[i][j], dwdr[i][j] = Cubic(r[i][j])
-    elif wtype == 'SPLI3':
-        w[i][j], dwdr[i][j] = Spline3(r[i][j])
-    elif wtype == 'SPLI5':
-        w[i][j], dwdr[i][j] = Spline5(r[i][j])
-    elif wtype == 'SPLIB':
-        w[i][j], dwdr[i][j] = BSpline(dmI / 2, r[i][j])
-    elif wtype == 'power':
-        w[i][j], dwdr[i][j] = power_function(para, r[i][j])
-    elif wtype == 'CRBF1':
-        w[i][j], dwdr[i][j] = CSRBF1(r[i][j])
-    elif wtype == 'CRBF2':
-        w[i][j], dwdr[i][j] = CSRBF2(r[i][j])
-    elif wtype == 'CRBF3':
-        w[i][j], dwdr[i][j] = CSRBF3(r[i][j])
-    elif wtype == 'CRBF4':
-        w[i][j], dwdr[i][j] = CSRBF4(r[i][j])
-    elif wtype == 'CRBF5':
-        w[i][j], dwdr[i][j] = CSRBF5(r[i][j])
-    elif wtype == 'CRBF6':
-        w[i][j], dwdr[i][j] = CSRBF6(r[i][j])
-    else:
-        print('Invalid type of weight function')
-
-    dwdx = dwdr * drdx
-    dwdy = dwdr * drdy
-
-    return w, dwdx, dwdy
-
-
-# shape function
 def Gauss(beta, r):
     w = 0.0
     dwdr = 0.0
@@ -110,12 +31,12 @@ def Spline3(r):
     w = 0.0
     dwdr = 0.0
 
-    if r <= 1.0 and r > 0.5:
-        w = 4 / 3 - 4 * r + 4 * r**2 - (4 * r**3) / 3
-        dwdr = -4 + 8 * r - 4 * r**2
-    elif r <= 0.5:
+    if r <= 0.5:
         w = 2 / 3 - 4 * r**2 + 4 * r**3
         dwdr = -8 * r + 12 * r**2
+    elif r > 0.5 and r <= 1.0:
+        w = 4 / 3 - 4 * r + 4 * r**2 - 4 * r**3 / 3
+        dwdr = -4 + 8 * r - 4 * r**2
 
     return w, dwdr
 
@@ -131,19 +52,6 @@ def Spline5(r):
     return w, dwdr
 
 
-def BSpline(h, r):
-    w = 0.0
-    dwdr = 0.0
-
-    if i <= 1.0 and i > 0.5:
-        w = 2 / (pi * h**3) * (1 - r)**3
-        dwdr = -6 / (pi * h**3) * (1 - r)**2
-    elif i <= 0.5:
-        w = 1 / (pi * h**3) * (1 - 6 * r**2 + 6 * r**3)
-        dwdr = 1 / (pi * h**3) * (-12 * r + 18 * r**2)
-    return w, dwdr
-
-
 def power_function(arfa, r):
     w = 0.0
     dwdr = 0.0
@@ -153,18 +61,6 @@ def power_function(arfa, r):
         r2 = r * r
         w = np.exp(-r2 / a2)
         dwdr = (-2 * r / a2) * np.exp(-r2 / a2)
-
-    return w, dwdr
-
-
-def CSRBF1(r):
-    w = 0.0
-    dwdr = 0.0
-
-    if r <= 1.0:
-        w = (1 - r)**4 * (4 + 16 * r + 12 * r**2 + 3 * r**3)
-        dwdr = -4 * (1 - r)**3 * (4 + 16 * r + 12 * r**2 + 3 *
-                                  r**3) + (1 - r)**4 * (16 + 24 * r + 9 * r**2)
 
     return w, dwdr
 
@@ -182,13 +78,21 @@ def CSRBF2(r):
     return w, dwdr
 
 
-def CSRBF3(r):
+def CSRBF1(r):
     w = 0.0
     dwdr = 0.0
 
     if r <= 1.0:
-        w = 1 / 3 + r**2 - 4 / 3 * r**3 + 2 * r**2 * np.log(r)
-        dwdr = 4 * r - 4 * r**2 + 4 * r * np.log(r)
+        w = (1 - r)**4 * (4 + 16 * r + 12 * r**2 + 3 * r**3)
+        dwdr = -4 * (1 - r)**3 * (4 + 16 * r + 12 * r**2 + 3 *
+                                  r**3) + (1 - r)**4 * (16 + 24 * r + 9 * r**2)
+
+    return w, dwdr
+
+
+def CSRBF3(r):
+    w = 0.0
+    dwdr = 0.0
 
     return w, dwdr
 
@@ -197,12 +101,6 @@ def CSRBF4(r):
     w = 0.0
     dwdr = 0.0
 
-    if r <= 1.0:
-        w = 1 / 15 + 19 / 6 * r**2 - 16 / 3 * r**3 + 3 * r**4 - \
-            16 / 15 * r**5 + 1 / 6 * r ^ 6 + 2 * r**2 * log(r)
-        dwdr = 25 / 3 * r - 16 * r**2 + 12 * r**3 - \
-            16 / 3 * r**4 + r**5 + 4 * r * np.log(r)
-
     return w, dwdr
 
 
@@ -210,29 +108,101 @@ def CSRBF5(r):
     w = 0.0
     dwdr = 0.0
 
-    if r <= 1.0:
-        w = (1 - r)**6 * (35 * r**2 + 18 * r + 3)
-        dwdr = -6 * (1 - r)**5 * (35 * r**2 + 18 * r + 3) + \
-            (1 - r)**6 * (70 * r + 18)
-
     return w, dwdr
 
 
-def CSRBF6(r):
-    w = 0.0
-    dwdr = 0.0
+# from qing_weight_2d import *
 
-    if r <= 1.0:
-        w = (1 - r)**8 * (32 * r**3 + 25 * r**2 + 8 * r + 1)
-        dwdr = -8 * (1 - r)**7 * (32 * r**3 + 25 * r**2 + 8 *
-                                  r + 1) + (1 - r)**8 * (96 * r**2 + 50 * r + 8)
+# EVALUATE WEIGHT FUNCTION
+#
+# SYNTAX:[w, dwdx, dwdy] = rectangleWeight(type, para, x,y,xI,yI,dmIx,dmIy)
+#
+# INPUT PARAMETERS
+#    type - Type of weight function
+#    para - Weight function parameter
+#    x,y   - gauss point coordinates
+#    xI,yI  -  nodal point coordinate
+#    dmIx - Support size with respect to x direction
+#    dmIy - Support size with respect to y direction
+# OUTPUT PARAMETERS
+#    w    - Value of weight function at r
+#    dwdx - Value of first order derivative of weight function with respect to x at r
+# dwdy - Value of first order derivative of weight function with respect
+# to y at r
 
-    return w, dwdr
 
+def rectangle_weight(wtype, para, x, y, xI, yI, dmIx, dmIy):
+    # print('wtype = ', wtype, end='\t')
+    # print('para = ', para, end='\t')
+    # print('x = ', x, end='\t')
+    # print('y = ', y, end='\t')
+    # print('xI = ', xI, end='\t')
+    # print('yI = ', yI, end='\t')
+    # print('dmIx = ', dmIx, end='\t')
+    # print('dmIy = ', dmIy, end='\n')
+    # return 0, 0, 0
+    # define the support size is a rectangle
+    rx = np.abs(x - xI) / dmIx
+    ry = np.abs(y - yI) / dmIy
 
-def main():
-    pass
+    # symbol of derivatives
+    if rx == 0:
+        drdx = 0
+    elif x - xI > 0:
+        drdx = 1 / dmIx
+    elif x - xI < 0:
+        drdx = -1 / dmIx
 
+    if ry == 0:
+        drdy = 0
+    elif y - yI > 0:
+        drdy = 1 / dmIy
+    elif y - yI < 0:
+        drdy = -1 / dmIy
 
-if __name__ == '__main__':
-    main()
+    # EVALUATE WEIGHT FUNCTION AND ITS FIRST AND SECOND ORDER OF DERIVATIVES
+    # WITH RESPECT r AT r
+    if wtype == 'GAUSS':
+        wx, dwdrx = Gauss(para, rx)
+        wy, dwdry = Gauss(para, ry)
+        # print('HERE, wx = %f, dwdrx = %f'%(wx, dwdrx), end = '\t')
+        # print('wy = %f, dwdry = %f'%(wy, dwdry), end = '\n')
+    elif wtype == 'CUBIC':
+        wx, dwdrx = Cubic(rx)
+        wy, dwdry = Cubic(ry)
+    elif wtype == 'SPLI3':
+        wx, dwdrx = Spline3(rx)
+        wy, dwdry = Spline3(ry)
+    elif wtype == 'SPLI5':
+        wx, dwdrx = Spline5(rx)
+        wy, dwdry = Spline5(ry)
+    elif wtype == 'power':
+        wx, dwdrx = power_function(para, rx)
+        wy, dwdry = power_function(para, ry)
+    elif wtype == 'CRBF1':
+        wx, dwdrx = CSRBF1(rx)
+        wy, dwdry = CSRBF1(ry)
+    elif wtype == 'CRBF2':
+        wx, dwdrx = CSRBF2(rx)
+        wy, dwdry = CSRBF2(ry)
+    elif wtype == 'CRBF3':
+        wx, dwdrx = CSRBF3(rx)
+        wy, dwdry = CSRBF3(ry)
+    elif wtype == 'CRBF4':
+        wx, dwdrx = CSRBF4(rx)
+        wy, dwdry = CSRBF4(ry)
+    elif wtype == 'CRBF5':
+        wx, dwdrx = CSRBF5(rx)
+        wy, dwdry = CSRBF5(ry)
+    elif wtype == 'CRBF6':
+        wx, dwdrx = CSRBF6(rx)
+        wy, dwdry = CSRBF6(ry)
+    else:
+        print('Invalid type of weight function.')
+        pass
+
+    w = wx * wy
+    dwdx = wy * dwdrx * drdx
+    dwdy = wx * dwdry * drdy
+
+    return w, dwdx, dwdy

@@ -1,5 +1,5 @@
-from qing_weight import *
-
+from qing_weight_1d import *
+from qing_weight_2d import *
 
 # SYNTAX: [PHI, DPHI, DDPHI] = MLS1DShape(m, nnodes, xi, npoints, x, dm, wtype, para)
 #
@@ -136,3 +136,165 @@ def qing_1d_mls(m, nnodes, xi, npoints, x, dmI, wtype, para):
 
     return PHI, DPHI, DDPHI
     pass
+
+
+
+# functions related to mls in 2d
+
+def get_pmatrices(m, nnodes, xj, yj, XI, YI):
+    if m == 1:
+        p = np.ones(nnodes)
+        pxy = np.array([1])
+        dpdx = np.array([0])
+        dpdy = np.array([0])
+    elif m == 3:
+        p = np.array([np.ones(nnodes), XI, YI])
+        pxy = np.array([[1], [xj], [yj]])
+        dpdx = np.array([[0], [1], [0]])
+        dpdy = np.array([[0], [0], [1]])
+    elif m == 6:
+        p = np.array([np.ones(nnodes), XI, YI, XI * XI, XI * YI, YI * YI])
+        pxy = np.array([[1], [xj], [yj], [xj * xj], [xj * yj], [yj * yj]])
+        dpdx = np.array([[0], [1], [0], [2 * xj], [yj], [0]])
+        dpdy = np.array([[0], [0], [1], [xj], [2 * yj], [0]])
+    else:
+        print('Invalid order of basis')
+
+    # print('p = ', p.shape, end = '\t')
+    # print('pxy = ', pxy.shape, end = '\t')
+    # print('dpdx = ', dpdx.shape, end = '\t')
+    # print('dpdy = ', dpdy.shape, end = '\n')
+    return p, pxy, dpdx, dpdy
+    pass
+
+
+def get_bmatrices(m, p, wI, dwdxI, dwdyI):
+    if m == 1:
+        B = p * wI
+        DBdx = p * dwdxI
+        DBdy = p * dwdyI
+    elif m == 3:
+        B = p * np.array([wI, wI, wI])
+        DBdx = p * np.array([dwdxI, dwdxI, dwdxI])
+        DBdy = p * np.array([dwdyI, dwdyI, dwdyI])
+    elif m == 6:
+        B = p * np.array([wI, wI, wI, wI, wI, wI])
+        DBdx = p * np.array([dwdxI, dwdxI, dwdxI, dwdxI, dwdxI, dwdxI])
+        DBdy = p * np.array([dwdyI, dwdyI, dwdyI, dwdyI, dwdyI, dwdyI])
+    else:
+        print('Invalid order of basis')
+
+    # print('B = ', B.shape, end = '\t')
+    # print('DBdx = ', DBdx.shape, end = '\t')
+    # print('DBdy = ', DBdy.shape, end = '\n')
+    return B, DBdx, DBdy
+    pass
+
+
+def get_amatrices(m, nnodes, p, wI, dwdxI, dwdyI):
+    A = np.zeros((m, m))
+    DAdx = np.zeros((m, m))
+    DAdy = np.zeros((m, m))
+    for i in range(0, nnodes):
+        pcol = np.reshape(np.copy(p[:, i]), (3, 1))
+        pcol_t = np.transpose(pcol)
+        pp = np.dot(pcol, pcol_t)
+        A = A + np.dot(wI[i], pp)
+        DAdx = DAdx + np.dot(dwdxI[i], pp)
+        DAdy = DAdy + np.dot(dwdyI[i], pp)
+
+    # print('A = ', A.shape, end = '\t')
+    # print('DAdx = ', DAdx.shape, end = '\t')
+    # print('DAdy = ', DAdy.shape, end = '\n')
+    return A, DAdx, DAdy
+    pass
+
+
+
+# SHAPE FUNCTION OF 2D MLS APPROXIMATION
+#
+# SYNTAX: [PHI, DPHI, DDPHI] = MLS2DShape(m, nnodes, xI,yI, npoints, xi,yi, dmI, type, para)
+#
+# INPUT PARAMETERS
+#    m - Total number of basis functions (1: Constant basis;  2: Linear basis;  3: Quadratic basis)
+#    nnodes  - Total number of nodes used to construct MLS approximation
+#    npoints - Total number of points whose MLS shape function to be evaluated
+#    xI,yI(nnodes) - Coordinates of nodes used to construct MLS approximation. 1-d array
+#    xi,yi(npoints) - Coordinates of points whose MLS shape function to be evaluated. 1-d array
+#    dm(nnodes) - Radius of support of nodes
+#    wtype - Type of weight function
+#    para  - Weight function parameter
+#
+# OUTPUT PARAMETERS
+#    PHI   - MLS Shpae function
+#    DPHIx  - First order derivatives of MLS Shpae function to x
+#    DPHIy - First order derivatives of MLS Shpae function to y
+#
+def qing_2d_mls(m, nnodes, xI, yI, npoints, x, y, dmI, wtype, para):
+    DmI = []
+    wI = np.zeros(nnodes)
+    dwdxI = np.zeros(nnodes)
+    dwdyI = np.zeros(nnodes)
+
+    # initialize shape function matrices
+    PHI = np.zeros((npoints, nnodes))
+    DPHIx = np.zeros((npoints, nnodes))
+    DPHIy = np.zeros((npoints, nnodes))
+
+    xII = np.zeros(nnodes)
+    yII = np.zeros(nnodes)
+    xII = np.copy(xI)
+    yII = np.copy(yI)
+
+    print('xI shape: ', xI.shape)
+    print('yI shape: ', yI.shape)
+    print('x shape: ', x.shape)
+    print('y shape: ', y.shape)
+
+    for j in range(0, npoints):
+        DmI = np.copy(dmI)
+        for i in range(0, nnodes):
+            wI[i], dwdxI[i], dwdyI[i] = rectangle_weight(
+                wtype, para, x[j], y[j], xI[i], yI[i], DmI[i], DmI[i])
+        # print('j = %d, i = %d, x = %f, y = %f, xi = %f, yi = %f, wI = %f,
+        # dwdxI = %f, dwdyI = %f' %
+        # (j, i, x[j], y[j], xI[i], yI[i], wI[i], dwdxI[i], dwdyI[i]))
+
+        p, pxy, dpdx, dpdy = get_pmatrices(m, nnodes, x[j], y[j], xII, yII)
+        B, DBdx, DBdy = get_bmatrices(m, p, wI, dwdxI, dwdyI)
+        A, DAdx, DAdy = get_amatrices(m, nnodes, p, wI, dwdxI, dwdyI)
+
+        ARcond = 1 / np.linalg.cond(A, 1)
+        print('After calculation, ARcond = ', ARcond, end='\t')
+        while ARcond <= 9.999999e-015:
+            DmI = 1.1 * DmI
+            for i in range(0, nnodes):
+                wI[i], dwdxI[i], dwdyI[i] = rectangle_weight(
+                    wtype, para, x[j], y[j], xI[i], yI[i], DmI[i], DmI[i])
+
+            xII = np.copy(xI)
+            yII = np.copy(yI)
+            p, pxy, dpdx, dpdy = get_pmatrices(m, nnodes, x[j], y[j], xII, yII)
+            B, DBdx, DBdy = get_bmatrices(m, p, wI, dwdxI, dwdyI)
+            A, DAdx, DAdy = get_amatrices(m, nnodes, p, wI, dwdxI, dwdyI)
+
+            ARcond = 1 / np.linalg.cond(A, 1)
+            print('\nIter: ARcond = ', ARcond)
+            pass
+
+        print('A condition statisfied.', end='\n')
+        Ainv = np.linalg.inv(A)
+        rxy = np.dot(Ainv, pxy)
+        PHI[j, :] = np.dot(np.transpose(rxy), B)
+
+        drdx = np.dot(Ainv, (dpdx - np.dot(DAdx, rxy)))
+        DPHIx[j, :] = np.dot(np.transpose(drdx), B) + \
+            np.dot(np.transpose(rxy), DBdx)
+
+        drdy = np.dot(Ainv, (dpdy - np.dot(DAdy, rxy)))
+        DPHIy[j, :] = np.dot(np.transpose(drdy), B) + \
+            np.dot(np.transpose(rxy), DBdy)
+
+    return PHI, DPHIx, DPHIy
+    pass
+
