@@ -1,9 +1,8 @@
 import numpy as np
 
-
 def qing_read_2d_txt(txtname):
     list_of_lists = []
-    with open(txtname, 'r') as f:
+    with open(txtname, 'r', 'utf-8') as f:
         data = f.readlines()
         # print('number of lines = %d'%(len(data)))
         for line in data:
