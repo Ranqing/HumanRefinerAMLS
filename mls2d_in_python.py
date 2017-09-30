@@ -34,7 +34,7 @@ def qing_plot_surface(ax, fig, xdata, ydata, zdata, clrmp):
 
 def test_2d_mls():
     # nodes
-    dx = 0.5
+    dx = 0.25
     vI = np.arange(-2, 2.1, dx)
     xI, yI = np.meshgrid(vI, vI)
     nnodes = len(xI) * len(yI)
@@ -87,7 +87,8 @@ def test_2d_mls():
 
     # radius of support of every node
     # scale * node inter
-    scale = 2.4
+    # scale = 2.0
+    scale = 1.0
     dx = 0.5
     dmI = scale * dx * np.ones(nnodes)
     # dmI = np.reshape(dmI, (1,nnodes))

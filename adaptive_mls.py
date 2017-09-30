@@ -502,12 +502,12 @@ def main():
     # dsptxt = 'final_disp_l_0.txt'
     # stereoinfo = 'stereo_A07A08.info'
 
-    workdir = './test/'
+    workdir = './test_new/'
     imgname = 'crop_imgL_2.jpg'        # 550x950
     mskname = 'crop_mskL_2.jpg'
     dspname = 'final_disp_l_2.jpg'
     dsptxt = 'final_disp_l_2.txt'
-    stereoinfo = 'stereo_A01A02.info'
+    stereoinfo = 'stereo_A07A08.info'
 
     # about image and mask data
     mskmtx = cv2.imread(workdir + mskname, 0)
@@ -541,10 +541,10 @@ def main():
     init_dsp_data = np.loadtxt(dsp_name)
     pointcnt, points, colors = qing_dsp_to_depth(init_dsp_data, thresh_msk, imgmtx, stereo_mtx,
                                                  f_st_x, f_st_y, f_base_d, scale)
-    ply_name = workdir + 'init_A01A02.ply'
+    ply_name = workdir + 'init_A07A08_2.ply'
     qing_save_ply(ply_name, pointcnt, points, colors)
     print('saving ', ply_name, '\t%d points.' % (pointcnt))
-    # sys.exit()
+    sys.exit()
 
     # output_dsp_txt, dsp_data = adaptive_mls_1d(
     #     workdir, dspname, mskname, dsptxt)
